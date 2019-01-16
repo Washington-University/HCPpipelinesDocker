@@ -1,0 +1,170 @@
+FROM centos:7.6.1810
+
+RUN yum install -y wget tar.x86_64 gzip unzip git which \
+	bzip2 bc hostname tcsh libgomp libGLU libXmu gcc \
+	qt5-qtbase libXrender xorg-x11-fonts-Type1 mesa-dri-drivers mesa-libGL-devel && \
+	mkdir -p /pipeline_tools/HCPpipelinesRunUtils && \
+	mkdir -p /HCP/intradb/archive && \
+	mkdir -p /HCP/hcpdb/archive && \
+	mkdir -p /HCP/hcpdb/build_ssd && \
+	mkdir -p /export/HCP/gradient_coefficient_files && \
+	mkdir -p /export/freesurfer_license
+	
+WORKDIR /pipeline_tools
+
+RUN wget https://github.com/Washington-University/HCPpipelinesRunUtils/archive/master.tar.gz -O hcp_pipelines_run_utils.tar.gz && \
+	tar xvf hcp_pipelines_run_utils.tar.gz -C /pipeline_tools/HCPpipelinesRunUtils --strip-components=1 && \
+	rm hcp_pipelines_run_utils.tar.gz
+
+RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /pipeline_tools/miniconda.sh && \
+	bash /pipeline_tools/miniconda.sh -b -p /opt/miniconda && \
+	rm /pipeline_tools/miniconda.sh
+
+ENV PATH="/opt/miniconda/bin:${PATH}"
+
+RUN	conda create -y --name singlepython3 python=3 && \
+	source activate singlepython3 && \
+	conda install -y requests && \
+	conda install -y pyqt
+	
+RUN wget ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz && \
+	mkdir -p /export/freesurfer-6.0 && \
+	tar -C /export/freesurfer-6.0 -xzvf freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz --strip-components=1 \
+		--exclude='freesurfer/trctrain' \
+		--exclude='freesurfer/average/SVIP*' \
+		--exclude='freesurfer/average/*/*' \
+		--exclude='freesurfer/lib/qt' \
+		--exclude='freesurfer/subjects/bert' \
+		--exclude='freesurfer/subjects/cvs_avg35*' \
+		--exclude='freesurfer/subjects/sample-00*' \
+		--exclude='freesurfer/subjects/fsaverage?' \
+		--exclude='freesurfer/subjects/fsaverage_sym' \
+		--exclude='freesurfer/docs/*/*' \
+		--exclude='freesurfer/fsfast/docs/*' \
+		--exclude='freesurfer/mni/mni.srcbuild.June2015.tgz' \
+		--exclude='freesurfer/bin/*test*' \
+		--exclude='freesurfer/bin/*Test*' && \
+	rm freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
+	
+RUN wget https://www.clear.rice.edu/comp140/downloads/epd/linux/epd-7.3-2-rh5-x86_64.sh && \
+	mkdir -p /export/HCP/epd-7.3.2 && \ 
+	bash epd-7.3-2-rh5-x86_64.sh -b -p /export/HCP/epd-7.3.2 && \
+	rm epd-7.3-2-rh5-x86_64.sh && \
+	rm -rf /export/HCP/epd-7.3.2/Examples/* && \
+	rm -rf /export/HCP/epd-7.3.2/Doc/*
+		
+ENV PATH="/export/HCP/epd-7.3.2/bin:${PATH}"
+
+RUN	yum install -y epel-release && \
+	yum install -y python2-pip.noarch openblas-devel && \
+	pip2 install numpy && \
+	pip2 install nibabel==2.3.0 --install-option="--prefix=/export/HCP/epd-7.3.2" && \
+	yum clean packages && \
+	rm -rf /var/cache/yum/* 
+
+RUN wget http://www.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.0-centos7_64.tar.gz && \
+	mkdir /export/fsl-6.0.0 && \
+	tar -xvzf fsl-6.0.0-centos7_64.tar.gz -C /export/fsl-6.0.0 --strip-components=1 && \
+	bash /export/fsl-6.0.0/etc/fslconf/post_install.sh -f /export/fsl-6.0.0 && \
+	rm fsl-6.0.0-centos7_64.tar.gz && \
+	bash -O extglob -c 'rm -rf /export/fsl-6.0.0/data/!(standard)' && \
+	rm -rf /export/fsl-6.0.0/doc/* && \
+	rm -rf /export/fsl-6.0.0/fslpython/pkgs/*.tar.bz2 && \
+	rm -rf /export/fsl-6.0.0/src/* && \
+	rm -rf /export/fsl-6.0.0/extras/src/*
+	
+RUN wget https://www.doc.ic.ac.uk/~ecr05/MSM_HOCR_v2/MSM_HOCR_v2-download.tgz && \
+	tar -xvzf MSM_HOCR_v2-download.tgz --strip-components=2 -C /export/HCP --exclude='MSM_HOCR_v2/MacOSX' --exclude='MSM_HOCR_v2/Ubuntu' && \
+	rm MSM_HOCR_v2-download.tgz	
+	
+RUN wget http://ssd.mathworks.com/supportfiles/MCR_Runtime/R2012b/MCR_R2012b_glnxa64_installer.zip && \
+	mkdir -p /export/matlab/MCR/R2012b/M && \
+	unzip MCR_R2012b_glnxa64_installer.zip -d /export/matlab/MCR/R2012b/M && \
+	/export/matlab/MCR/R2012b/M/install -mode silent -agreeToLicense yes -destinationFolder /export/matlab/MCR/R2012b && \
+	rm -rf /export/matlab/MCR/R2012b/M && \
+	rm MCR_R2012b_glnxa64_installer.zip && \
+	ln -s /export/matlab/MCR/R2012b/v80 /export/freesurfer-6.0/MCRv80
+	
+RUN	wget https://github.com/Washington-University/gradunwarp/archive/v1.1.0.tar.gz -O gradunwarp.tar.gz && \
+	tar -xzvf gradunwarp.tar.gz
+WORKDIR /pipeline_tools/gradunwarp-1.1.0
+
+RUN python setup.py install --prefix=/export/HCP/epd-7.3.2
+WORKDIR /pipeline_tools
+RUN rm -r gradunwarp-1.1.0 && \
+	rm gradunwarp.tar.gz
+			
+RUN wget https://ftp.humanconnectome.org/workbench/workbench-rh_linux64-v1.3.2.zip && \
+	unzip workbench-rh_linux64-v1.3.2.zip -d /export/HCP/ && \
+	rm workbench-rh_linux64-v1.3.2.zip && \
+	rm -f /export/HCP/workbench/plugins_rh_linux64/plugins.zip	
+	
+RUN	wget https://github.com/Washington-University/HCPpipelines/archive/feature/freesurfer_v6_latest.tar.gz && \
+	mkdir -p /export/HCP/Pipelines && \
+	tar xvf freesurfer_v6_latest.tar.gz -C /export/HCP/Pipelines --strip-components=1 && \
+	rm freesurfer_v6_latest.tar.gz	
+	
+RUN	ln -s /export/HCP/gradient_coefficient_files/3TPrisma_coeff_AS82_trunc.grad /export/HCP/Pipelines/global/config/3TPrisma_coeff_AS82_trunc.grad && \
+	ln -s /export/HCP/gradient_coefficient_files/coeff_SC72C_Skyra.grad /export/HCP/Pipelines/global/config/coeff_SC72C_Skyra.grad && \
+	ln -s /export/HCP/gradient_coefficient_files/trunc.CMRR_7TAS_coeff_SC72CD.grad /export/HCP/Pipelines/global/config/trunc.CMRR_7TAS_coeff_SC72CD.grad && \
+	ln -s /export/HCP/gradient_coefficient_files/CMRR_3TPrisma_coeff_AS82_trunc.grad /export/HCP/Pipelines/global/config/CMRR_3TPrisma_coeff_AS82_trunc.grad && \
+	ln -s /export/HCP/gradient_coefficient_files/Prisma_3T_coeff_AS82.grad /export/HCP/Pipelines/global/config/Prisma_3T_coeff_AS82.grad && \
+	ln -s /export/freesurfer_license/license.txt /export/freesurfer-6.0/license.txt
+
+RUN	cp /export/HCP/Pipelines/FreeSurferCustomizations/recon-all.v6.hires /export/freesurfer-6.0/bin/recon-all.v6.hires && \
+	chmod 775 /export/freesurfer-6.0/bin/recon-all.v6.hires && \	
+	cp /export/HCP/Pipelines/FreeSurferCustomizations/conf2hires /export/freesurfer-6.0/bin/conf2hires && \
+	chmod 775 /export/freesurfer-6.0/bin/conf2hires && \
+	cp /export/HCP/Pipelines/FreeSurferCustomizations/longmc /export/freesurfer-6.0/bin/longmc && \
+	chmod 775 /export/freesurfer-6.0/bin/longmc
+	
+ENV PATH="/opt/miniconda/bin:${PATH}" \
+	QT_XKB_CONFIG_ROOT="/usr/share/X11/xkb" \
+	HCP_RUN_UTILS="/pipeline_tools/HCPpipelinesRunUtils" \
+	FSLDIR="/export/fsl-6.0.0" \
+	FREESURFER_HOME="/export/freesurfer-6.0" 
+ENV	FSLOUTPUTTYPE="NIFTI_GZ" \
+	FSLMULTIFILEQUIT="TRUE" \
+	SLTCLSH="${FSLDIR}/bin/fsltclsh" \
+	FSLWISH="${FSLDIR}/bin/fslwish" \
+	FSLLOCKDIR= \
+	FSLMACHINELIST= \
+	FSLREMOTECALL= \
+	FSLGECUDAQ="cuda.q" \
+	FSL_DIR="${FSLDIR}" \
+	SUBJECTS_DIR="${FREESURFER_HOME}/subjects" \
+	FUNCTIONALS_DIR="${FREESURFER_HOME}/sessions" \
+	OS="Linux" \
+	FS_OVERRIDE="0" \
+	FSFAST_HOME="${FREESURFER_HOME}/fsfast" \
+	SUBJECTS_DIR="${FREESURFER_HOME}/subjects" \
+	MINC_BIN_DIR="${FREESURFER_HOME}/mni/bin" \
+	MNI_DIR="${FREESURFER_HOME}/mni" \
+	MINC_LIB_DIR="${FREESURFER_HOME}/mni/lib" \
+	MNI_DATAPATH="${FREESURFER_HOME}/mni/data" \
+	LOCAL_DIR="${FREESURFER_HOME}"/local \
+	FSF_OUTPUT_FORMAT="nii.gz" \
+	MNI_PERL5LIB="${FREESURFER_HOME}/mni/share/perl5"
+ENV	FMRI_ANALYSIS_DIR="${FSFAST_HOME}" \
+	PERL5LIB="${MNI_PERL5LIB}:${PERL5LIB}" \
+	FSL_BIN="${FSL_DIR}/bin" \
+	FIX_VERTEX_AREA= \
+	EPD_PYTHON_HOME="/export/HCP/epd-7.3.2" \
+	HCPPIPEDIR="/export/HCP/Pipelines"
+ENV	PATH="${FREESURFER_HOME}/bin:${FSFAST_HOME}/bin:${FREESURFER_HOME}/tktools:${FSL_BIN}:${FREESURFER_HOME}/lib/misc/bin:${FSL_BIN}:${MINC_BIN_DIR}:${PATH}"
+ENV PATH="${EPD_PYTHON_HOME}/bin:${PATH}" \
+	CARET7DIR="/export/HCP/workbench/bin_rh_linux64" \
+	HCPPIPEDIR_Config="${HCPPIPEDIR}/global/config" \
+	HCPPIPEDIR_Global="${HCPPIPEDIR}/global/scripts" \
+	HCPPIPEDIR_Templates="${HCPPIPEDIR}/global/templates" \
+	HCPPIPEDIR_PreFS="${HCPPIPEDIR}/PreFreeSurfer/scripts" \
+	HCPPIPEDIR_FS="${HCPPIPEDIR}/FreeSurfer/scripts" \
+	HCPPIPEDIR_PostFS="${HCPPIPEDIR}/PostFreeSurfer/scripts" \
+	HCPPIPEDIR_fMRISurf="${HCPPIPEDIR}/fMRISurface/scripts" \
+	HCPPIPEDIR_fMRIVol="${HCPPIPEDIR}/fMRIVolume/scripts" \
+	HCPPIPEDIR_dMRI="${HCPPIPEDIR}/DiffusionPreprocessing/scripts" \
+	HCPPIPEDIR_tfMRIAnalysis="${HCPPIPEDIR}/TaskfMRIAnalysis/scripts" \
+	MSMBINDIR="/export/HCP/MSM_HOCR_v2/Centos" \
+	MSMCONFIGDIR="${HCPPIPEDIR}/MSMConfig" \
+	CLUSTER="2.0" \
+	PYTHONPATH="${HCP_RUN_UTILS}/lib"
