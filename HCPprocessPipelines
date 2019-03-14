@@ -1,6 +1,6 @@
 FROM centos:7.6.1810
 
-RUN yum install -y wget tar.x86_64 gzip unzip git which \
+RUN yum install -y wget tar gzip unzip git which \
 	bzip2 bc hostname tcsh libgomp libGLU libXmu gcc \
 	qt5-qtbase libXrender xorg-x11-fonts-Type1 mesa-dri-drivers mesa-libGL-devel && \
 	mkdir -p /pipeline_tools/HCPpipelinesRunUtils && \
@@ -12,7 +12,7 @@ RUN yum install -y wget tar.x86_64 gzip unzip git which \
 	
 WORKDIR /pipeline_tools
 
-RUN wget https://github.com/Washington-University/HCPpipelinesRunUtils/archive/master.tar.gz -O hcp_pipelines_run_utils.tar.gz && \
+RUN wget https://github.com/Washington-University/HCPpipelinesRunUtils/archive/v1.4.0.tar.gz -O hcp_pipelines_run_utils.tar.gz && \
 	tar xvf hcp_pipelines_run_utils.tar.gz -C /pipeline_tools/HCPpipelinesRunUtils --strip-components=1 && \
 	rm hcp_pipelines_run_utils.tar.gz
 
@@ -41,9 +41,7 @@ RUN wget ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-L
 		--exclude='freesurfer/subjects/fsaverage_sym' \
 		--exclude='freesurfer/docs/*/*' \
 		--exclude='freesurfer/fsfast/docs/*' \
-		--exclude='freesurfer/mni/mni.srcbuild.June2015.tgz' \
-		--exclude='freesurfer/bin/*test*' \
-		--exclude='freesurfer/bin/*Test*' && \
+		--exclude='freesurfer/mni/mni.srcbuild.June2015.tgz' && \
 	rm freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
 	
 RUN wget https://www.clear.rice.edu/comp140/downloads/epd/linux/epd-7.3-2-rh5-x86_64.sh && \
@@ -62,20 +60,21 @@ RUN	yum install -y epel-release && \
 	yum clean packages && \
 	rm -rf /var/cache/yum/* 
 
-RUN wget http://www.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.0-centos7_64.tar.gz && \
-	mkdir /export/fsl-6.0.0 && \
-	tar -xvzf fsl-6.0.0-centos7_64.tar.gz -C /export/fsl-6.0.0 --strip-components=1 && \
-	bash /export/fsl-6.0.0/etc/fslconf/post_install.sh -f /export/fsl-6.0.0 && \
-	rm fsl-6.0.0-centos7_64.tar.gz && \
-	bash -O extglob -c 'rm -rf /export/fsl-6.0.0/data/!(standard)' && \
-	rm -rf /export/fsl-6.0.0/doc/* && \
-	rm -rf /export/fsl-6.0.0/fslpython/pkgs/*.tar.bz2 && \
-	rm -rf /export/fsl-6.0.0/src/* && \
-	rm -rf /export/fsl-6.0.0/extras/src/*
+RUN wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.1-centos7_64.tar.gz && \
+	mkdir /export/fsl-6.0.1 && \
+	tar -xvzf fsl-6.0.1-centos7_64.tar.gz -C /export/fsl-6.0.1 --strip-components=1 && \
+	bash /export/fsl-6.0.1/etc/fslconf/post_install.sh -f /export/fsl-6.0.1 && \
+	rm fsl-6.0.1-centos7_64.tar.gz && \
+	bash -O extglob -c 'rm -rf /export/fsl-6.0.1/data/!(standard)' && \
+	rm -rf /export/fsl-6.0.1/doc/* && \
+	rm -rf /export/fsl-6.0.1/fslpython/pkgs/*.tar.bz2 && \
+	rm -rf /export/fsl-6.0.1/src/* && \
+	rm -rf /export/fsl-6.0.1/extras/src/*
 	
-RUN wget https://www.doc.ic.ac.uk/~ecr05/MSM_HOCR_v2/MSM_HOCR_v2-download.tgz && \
-	tar -xvzf MSM_HOCR_v2-download.tgz --strip-components=2 -C /export/HCP --exclude='MSM_HOCR_v2/MacOSX' --exclude='MSM_HOCR_v2/Ubuntu' && \
-	rm MSM_HOCR_v2-download.tgz	
+RUN wget https://github.com/ecr05/MSM_HOCR/releases/download/1.0/msm_centos && \
+	mkdir -p /export/HCP/MSM_HOCR_v1/Centos && \
+	mv msm_centos /export/HCP/MSM_HOCR_v1/Centos/msm && \
+	chmod 755 /export/HCP/MSM_HOCR_v1/Centos/msm
 	
 RUN wget http://ssd.mathworks.com/supportfiles/MCR_Runtime/R2012b/MCR_R2012b_glnxa64_installer.zip && \
 	mkdir -p /export/matlab/MCR/R2012b/M && \
@@ -111,17 +110,10 @@ RUN	ln -s /export/HCP/gradient_coefficient_files/3TPrisma_coeff_AS82_trunc.grad 
 	ln -s /export/HCP/gradient_coefficient_files/Prisma_3T_coeff_AS82.grad /export/HCP/Pipelines/global/config/Prisma_3T_coeff_AS82.grad && \
 	ln -s /export/freesurfer_license/license.txt /export/freesurfer-6.0/license.txt
 
-RUN	cp /export/HCP/Pipelines/FreeSurferCustomizations/recon-all.v6.hires /export/freesurfer-6.0/bin/recon-all.v6.hires && \
-	chmod 775 /export/freesurfer-6.0/bin/recon-all.v6.hires && \	
-	cp /export/HCP/Pipelines/FreeSurferCustomizations/conf2hires /export/freesurfer-6.0/bin/conf2hires && \
-	chmod 775 /export/freesurfer-6.0/bin/conf2hires && \
-	cp /export/HCP/Pipelines/FreeSurferCustomizations/longmc /export/freesurfer-6.0/bin/longmc && \
-	chmod 775 /export/freesurfer-6.0/bin/longmc
-	
 ENV PATH="/opt/miniconda/bin:${PATH}" \
 	QT_XKB_CONFIG_ROOT="/usr/share/X11/xkb" \
 	HCP_RUN_UTILS="/pipeline_tools/HCPpipelinesRunUtils" \
-	FSLDIR="/export/fsl-6.0.0" \
+	FSLDIR="/export/fsl-6.0.1" \
 	FREESURFER_HOME="/export/freesurfer-6.0" 
 ENV	FSLOUTPUTTYPE="NIFTI_GZ" \
 	FSLMULTIFILEQUIT="TRUE" \
@@ -167,4 +159,5 @@ ENV PATH="${EPD_PYTHON_HOME}/bin:${PATH}" \
 	MSMBINDIR="/export/HCP/MSM_HOCR_v2/Centos" \
 	MSMCONFIGDIR="${HCPPIPEDIR}/MSMConfig" \
 	CLUSTER="2.0" \
-	PYTHONPATH="${HCP_RUN_UTILS}/lib"
+	PYTHONPATH="${HCP_RUN_UTILS}/lib" \
+	PATH="${HCPPIPEDIR}/FreeSurfer/custom:${PATH}"
