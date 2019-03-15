@@ -98,10 +98,10 @@ RUN wget https://ftp.humanconnectome.org/workbench/workbench-rh_linux64-v1.3.2.z
 	rm workbench-rh_linux64-v1.3.2.zip && \
 	rm -f /export/HCP/workbench/plugins_rh_linux64/plugins.zip	
 	
-RUN	wget https://github.com/Washington-University/HCPpipelines/archive/feature/freesurfer_v6_latest.tar.gz && \
+RUN	wget https://github.com/Washington-University/HCPpipelines/archive/v4.0.0.tar.gz -O hcp_pipelines.tar.gz && \
 	mkdir -p /export/HCP/Pipelines && \
-	tar xvf freesurfer_v6_latest.tar.gz -C /export/HCP/Pipelines --strip-components=1 && \
-	rm freesurfer_v6_latest.tar.gz	
+	tar xvf hcp_pipelines.tar.gz -C /export/HCP/Pipelines --strip-components=1 && \
+	rm hcp_pipelines.tar.gz			
 	
 RUN	ln -s /export/HCP/gradient_coefficient_files/3TPrisma_coeff_AS82_trunc.grad /export/HCP/Pipelines/global/config/3TPrisma_coeff_AS82_trunc.grad && \
 	ln -s /export/HCP/gradient_coefficient_files/coeff_SC72C_Skyra.grad /export/HCP/Pipelines/global/config/coeff_SC72C_Skyra.grad && \
